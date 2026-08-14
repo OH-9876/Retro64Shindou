@@ -20,9 +20,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Arrays;
+import java.util.Set;
 
 public class SM64EnvManager {
 
@@ -42,7 +45,18 @@ public class SM64EnvManager {
         updateSurfs(surfs,null);
     }
 
-    final static String ROM_HASH="9bef1128717f958171a4afac3ed78ee2bb4e86ce";
+    // Accepted SHA1 hashes for known ROMs. Keep the original hash here; add the Shindou SHA1 here when available.
+    private static final Set<String> ACCEPTED_ROM_SHA1 = Set.of(
+            "9bef1128717f958171a4afac3ed78ee2bb4e86ce" // original ROM hash (kept for backwards compatibility)
+            // add Shindou SHA1 here, e.g. "<shindou-sha1>"
+    );
+
+    // Preferred filenames (first is preferred/required name). The mod will prefer baserom.sh.z64 but accept legacy names.
+    private static final String[] CANDIDATE_ROM_NAMES = new String[]{
+            "baserom.sh.z64", // preferred Shindou filename
+            "baserom.us.z64", // legacy name (previous behavior)
+            "baserom.z64"     // fallback
+    };
 
     /**
      * Update volume
@@ -194,6 +208,18 @@ public class SM64EnvManager {
         return sb.toString();
     }
 
+    private static boolean isAcceptedRom(File f){
+        try{
+            String name = f.getName();
+            if (Arrays.asList(CANDIDATE_ROM_NAMES).contains(name)) return true;
+            String sha = createSha1String(f);
+            return ACCEPTED_ROM_SHA1.contains(sha);
+        } catch (Exception e){
+            e.printStackTrace();
+            return false;
+        }
+    }
+
     /**
      * find a file that matches the ROM_HASH"
      * @return the file that matches the SHA1 hash, or null if no file matches
@@ -202,7 +228,7 @@ public class SM64EnvManager {
 
         try{
             File configuredROMPath=new File(Retro64Config.ROM_PATH.get());
-            if (configuredROMPath.exists() && createSha1String(configuredROMPath).equals(ROM_HASH)){
+            if (configuredROMPath.exists() && isAcceptedRom(configuredROMPath)){
                 return configuredROMPath;
             }
         } catch (Exception e) {
@@ -212,7 +238,7 @@ public class SM64EnvManager {
 
         File[] files = new File(FMLPaths.MODSDIR.get().toString()).listFiles(f -> {
             try {
-                return f.toPath().toString().endsWith("64") && createSha1String(f).equals(ROM_HASH);
+                return f.toPath().toString().endsWith("64") && isAcceptedRom(f);
             } catch (Exception e) {
                 e.printStackTrace();
                 return false;
@@ -239,7 +265,7 @@ public class SM64EnvManager {
                     int returnVal = fileChooser.showOpenDialog(dialog);
                     if (returnVal == JFileChooser.APPROVE_OPTION) {
                         File file = fileChooser.getSelectedFile();
-                        if (createSha1String(file).equals(ROM_HASH)) {
+                        if (isAcceptedRom(file)) {
                             Retro64Config.ROM_PATH.set(file.getAbsolutePath());
                             Retro64Config.ROM_PATH.save();
                             return file;
@@ -257,6 +283,7 @@ public class SM64EnvManager {
 
             return null;//throw new FileNotFoundException("Could not find valid ROM");
         }
+        // Move the first matched ROM into the mods folder and name it baserom.sh.z64 (preferred name)
         Retro64Config.ROM_PATH.set(files[0].toPath().toString());
         Retro64Config.ROM_PATH.save();
         return files[0];
@@ -274,9 +301,9 @@ public class SM64EnvManager {
         if (romFile == null) {
             return;
         }
-        if (!romFile.getName().equals("baserom.us.z64")){
-            var newPath=Path.of("mods","baserom.us.z64");
-            Files.move(romFile.toPath(),newPath);
+        if (!romFile.getName().equals("baserom.sh.z64")){
+            var newPath=Path.of("mods","baserom.sh.z64");
+            Files.move(romFile.toPath(),newPath, StandardCopyOption.REPLACE_EXISTING);
             romFile=newPath.toFile();
         }
 
