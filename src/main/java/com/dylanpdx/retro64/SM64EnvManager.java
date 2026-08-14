@@ -47,8 +47,8 @@ public class SM64EnvManager {
 
     // Accepted SHA1 hashes for known ROMs. Keep the original hash here; add the Shindou SHA1 here when available.
     private static final Set<String> ACCEPTED_ROM_SHA1 = Set.of(
-            "9bef1128717f958171a4afac3ed78ee2bb4e86ce" // original ROM hash (kept for backwards compatibility)
-            // add Shindou SHA1 here, e.g. "<shindou-sha1>"
+            "9bef1128717f958171a4afac3ed78ee2bb4e86ce", // original ROM hash (kept for backwards compatibility)
+            "3f319ae697533a255a1003d09202379d78d5a2e0"  // SM64 Shindou SHA1 (added)
     );
 
     // Preferred filenames (first is preferred/required name). The mod will prefer baserom.sh.z64 but accept legacy names.
